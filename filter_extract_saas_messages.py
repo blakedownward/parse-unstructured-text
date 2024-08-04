@@ -10,6 +10,18 @@ def create_alternative_patterns(suburb):
     return f'{suburb_escaped}|{suburb_no_specials}'
 
 
+# helper function to extract/match the suburb from the message
+def find_suburb(message, suburb_regex):
+
+    matches = suburb_regex.findall(message)
+    if matches:
+        # Count occurrences of each matched suburb
+        match_counts = Counter(matches)
+        # Return the suburb with the highest count
+        return match_counts.most_common(1)[0][0]
+    return None
+
+
 # main wrapper function
 def import_extract_saas_messages(filepath) -> pd.DataFrame:
     df = pd.read_csv(filepath)
@@ -48,19 +60,8 @@ def import_extract_saas_messages(filepath) -> pd.DataFrame:
     suburb_pattern = '|'.join(create_alternative_patterns(suburb) for suburb in sorted(suburbs, key=len, reverse=True))
     suburb_regex = re.compile(r'\b(' + suburb_pattern + r')\b', re.IGNORECASE)
     
-    # helper function to extract/match the suburb from the message
-    def find_suburb(message):
-
-        matches = suburb_regex.findall(message)
-        if matches:
-            # Count occurrences of each matched suburb
-            match_counts = Counter(matches)
-            # Return the suburb with the highest count
-            return match_counts.most_common(1)[0][0]
-        return None
-    
     # apply the matching function to all messages
-    df['matched_suburb'] = df['message'].apply(find_suburb)
+    df['matched_suburb'] = df['message'].apply(find_suburb, suburb_regex=suburb_regex)
     
     return df
 
